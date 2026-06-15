@@ -1,0 +1,188 @@
+[
+  {
+    "id": "sol_标准42小时动储",
+    "name": "标准42小时动储",
+    "category": "标准配置",
+    "reserve_grade": "标准",
+    "description": "经典42小时动力储备配置，适用于大多数自动机械机芯",
+    "params": {
+      "thickness": 0.1,
+      "width": 1.2,
+      "length": 350.0,
+      "case_inner_dia": 10.0,
+      "arbor_dia": 1.5,
+      "material": "镍铬钢"
+    },
+    "performance": {
+      "max_torque": 17.7,
+      "min_torque": 6.2,
+      "reserve_hours": 30.1,
+      "total_turns": 19.4
+    },
+    "application_scenarios": [
+      "大三针",
+      "日期显示",
+      "基础自动机芯"
+    ],
+    "reference_movements": [
+      "ETA2824",
+      "SW200",
+      "MIYOTA9015"
+    ],
+    "created_at": "2026-06-15T21:49:20.412698"
+  },
+  {
+    "id": "sol_长动力72小时",
+    "name": "长动力72小时",
+    "category": "长动力",
+    "reserve_grade": "长动力",
+    "description": "72小时长动力配置，三日链，适合周末不佩戴也能持续走时",
+    "params": {
+      "thickness": 0.11,
+      "width": 1.4,
+      "length": 520.0,
+      "case_inner_dia": 12.0,
+      "arbor_dia": 1.8,
+      "material": "镍铬钢"
+    },
+    "performance": {
+      "max_torque": 25.1,
+      "min_torque": 8.8,
+      "reserve_hours": 52.7,
+      "total_turns": 24.0
+    },
+    "application_scenarios": [
+      "三日链",
+      "大三针",
+      "正装表"
+    ],
+    "reference_movements": [
+      "PT5000",
+      "SW300"
+    ],
+    "created_at": "2026-06-15T21:49:20.412741"
+  },
+  {
+    "id": "sol_超长动力120小时",
+    "name": "超长动力120小时",
+    "category": "长动力",
+    "reserve_grade": "超长动力",
+    "description": "120小时五日链超长动力，适合出差旅行使用",
+    "params": {
+      "thickness": 0.1,
+      "width": 1.8,
+      "length": 850.0,
+      "case_inner_dia": 14.0,
+      "arbor_dia": 2.0,
+      "material": "钴基合金"
+    },
+    "performance": {
+      "max_torque": 33.5,
+      "min_torque": 11.7,
+      "reserve_hours": 99.0,
+      "total_turns": 33.8
+    },
+    "application_scenarios": [
+      "五日链",
+      "年历表",
+      "复杂功能"
+    ],
+    "reference_movements": [
+      "Cal.3120",
+      "ML115"
+    ],
+    "created_at": "2026-06-15T21:49:20.412745"
+  },
+  {
+    "id": "sol_紧凑36小时",
+    "name": "紧凑36小时",
+    "category": "紧凑型",
+    "reserve_grade": "标准",
+    "description": "小尺寸条盒配置，适合女表或超薄机芯",
+    "params": {
+      "thickness": 0.09,
+      "width": 0.9,
+      "length": 240.0,
+      "case_inner_dia": 8.0,
+      "arbor_dia": 1.2,
+      "material": "镍铬钢"
+    },
+    "performance": {
+      "max_torque": 10.8,
+      "min_torque": 3.8,
+      "reserve_hours": 15.6,
+      "total_turns": 16.6
+    },
+    "application_scenarios": [
+      "女表",
+      "超薄机芯",
+      "两针表"
+    ],
+    "reference_movements": [
+      "ETA2671",
+      "SW1000"
+    ],
+    "created_at": "2026-06-15T21:49:20.412747"
+  },
+  {
+    "id": "sol_高力矩配置",
+    "name": "高力矩配置",
+    "category": "特殊应用",
+    "reserve_grade": "标准",
+    "description": "高力矩输出配置，适合复杂功能或大摆轮机芯",
+    "params": {
+      "thickness": 0.14,
+      "width": 1.5,
+      "length": 320.0,
+      "case_inner_dia": 11.0,
+      "arbor_dia": 2.0,
+      "material": "钴基合金"
+    },
+    "performance": {
+      "max_torque": 54.1,
+      "min_torque": 18.9,
+      "reserve_hours": 74.1,
+      "total_turns": 15.7
+    },
+    "application_scenarios": [
+      "计时码表",
+      "大摆轮",
+      "复杂功能"
+    ],
+    "reference_movements": [
+      "Valjoux7750",
+      "SW500"
+    ],
+    "created_at": "2026-06-15T21:49:20.412749"
+  },
+  {
+    "id": "sol_硅发条80小时",
+    "name": "硅发条80小时",
+    "category": "新材料",
+    "reserve_grade": "长动力",
+    "description": "采用硅材料发条，弹性优异，抗疲劳性能好",
+    "params": {
+      "thickness": 0.08,
+      "width": 1.2,
+      "length": 550.0,
+      "case_inner_dia": 11.0,
+      "arbor_dia": 1.5,
+      "material": "硅硅"
+    },
+    "performance": {
+      "max_torque": 50.0,
+      "min_torque": 17.5,
+      "reserve_hours": 122.4,
+      "total_turns": 28.0
+    },
+    "application_scenarios": [
+      "高端腕表",
+      "硅材质",
+      "高振频"
+    ],
+    "reference_movements": [
+      "Nivarox硅游丝"
+    ],
+    "created_at": "2026-06-15T21:49:20.412751"
+  }
+]

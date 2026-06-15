@@ -1,0 +1,16 @@
+{
+  "current_params": {
+    "thickness": 0.12,
+    "width": 1.2,
+    "length": 200.0,
+    "case_inner_dia": 10.0,
+    "arbor_dia": 1.5,
+    "material": "镍铬钢",
+    "E_ref": 206000.0,
+    "temp_ref": 20.0,
+    "E_temp_coeff": -0.00025,
+    "density": 7.85
+  },
+  "theme": "light",
+  "unit_system": "metric"
+}
