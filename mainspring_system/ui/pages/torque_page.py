@@ -4,13 +4,15 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import sys
 import os
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.mechanics import AnalysisResult
+from core.storage import DesignReportGenerator
 from ui.widgets.chart_canvas import TorqueChart, BarChart
 
 
@@ -38,6 +40,14 @@ class TorquePage(ttk.Frame):
         self.temp_label = ttk.Label(title_frame, text="温度: 20°C",
                                     foreground='#666')
         self.temp_label.pack(side=tk.LEFT, padx=(20, 0))
+
+        btn_frame = ttk.Frame(title_frame)
+        btn_frame.pack(side=tk.RIGHT)
+
+        ttk.Button(btn_frame, text="导出设计报告",
+                   command=self._on_export_report).pack(side=tk.RIGHT, padx=2)
+        ttk.Button(btn_frame, text="保存为档案",
+                   command=self._on_save_as_archive).pack(side=tk.RIGHT, padx=2)
 
         content = ttk.Frame(main_container)
         content.pack(fill=tk.BOTH, expand=True)
@@ -265,3 +275,48 @@ class TorquePage(ttk.Frame):
                 colors.append('#d62728')
 
         self.temp_chart.set_data(reserve_values, labels, colors)
+
+    def _on_export_report(self):
+        """导出设计报告"""
+        if not self.analysis_result:
+            messagebox.showinfo("提示", "请先执行分析")
+            return
+
+        default_name = f"发条设计报告_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        filepath = filedialog.asksaveasfilename(
+            title="导出设计报告",
+            defaultextension=".txt",
+            initialfile=default_name,
+            filetypes=[("文本文件", "*.txt"), ("所有文件", "*.*")]
+        )
+
+        if not filepath:
+            return
+
+        try:
+            compensation_result = None
+            if self.app and hasattr(self.app, 'compensation_page'):
+                comp_page = self.app.compensation_page
+                if hasattr(comp_page, 'current_compensation') and comp_page.current_compensation:
+                    compensation_result = comp_page.current_compensation
+
+            DesignReportGenerator.generate_text_report(
+                self.analysis_result,
+                compensation_result=compensation_result,
+                filepath=filepath
+            )
+
+            messagebox.showinfo("成功", f"设计报告已导出到:\n{filepath}")
+        except Exception as e:
+            messagebox.showerror("错误", f"导出失败: {str(e)}")
+
+    def _on_save_as_archive(self):
+        """保存为档案"""
+        if not self.analysis_result:
+            messagebox.showinfo("提示", "请先执行分析")
+            return
+
+        if self.app and hasattr(self.app, 'archive_page'):
+            self.app.show_page("archive")
+            archive_page = self.app.archive_page
+            archive_page._on_create_from_analysis()

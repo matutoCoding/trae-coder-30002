@@ -25,8 +25,9 @@ class CompensationPage(ttk.Frame):
         super().__init__(master, **kwargs)
         self.app = app
         self.analysis_result = None
-        self.compensation_results = []
+        self.compensation_results = {}
         self.selected_compensations = []
+        self.current_compensation = None
 
         self._build_ui()
 
@@ -223,6 +224,18 @@ class CompensationPage(ttk.Frame):
 
         self._update_effect_list(selected_keys)
         self._update_comparison(selected_keys)
+
+        if selected_keys:
+            best_key = "original"
+            best_improvement = 0
+            for key in selected_keys:
+                if key != "original" and key in self.compensation_results:
+                    result = self.compensation_results[key]
+                    if result.improvement_pct > best_improvement:
+                        best_improvement = result.improvement_pct
+                        best_key = key
+            if best_key in self.compensation_results:
+                self.current_compensation = self.compensation_results[best_key]
 
     def _update_effect_list(self, selected_keys):
         """更新效果列表"""

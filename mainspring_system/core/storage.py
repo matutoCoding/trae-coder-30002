@@ -22,6 +22,11 @@ class MovementArchive:
     manufacturer: str = ""
     spring_params: dict = field(default_factory=dict)
     torque_curve: list = field(default_factory=list)
+    analysis_summary: dict = field(default_factory=dict)
+    risk_warnings: list = field(default_factory=list)
+    case_check: dict = field(default_factory=dict)
+    temp_effects: dict = field(default_factory=dict)
+    decay_segments: list = field(default_factory=list)
     measured_reserve_hours: float = 0.0
     measured_max_torque: float = 0.0
     measured_min_torque: float = 0.0
@@ -40,6 +45,75 @@ class MovementArchive:
             if hasattr(archive, key):
                 setattr(archive, key, val)
         return archive
+
+    @classmethod
+    def from_analysis(cls, result, name: str = "", model: str = "") -> 'MovementArchive':
+        """从分析结果创建档案"""
+        from .mechanics import SpringParams
+        archive = cls()
+        archive.name = name or f"分析结果 {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        archive.model = model
+        archive.spring_params = result.params.to_dict() if hasattr(result.params, 'to_dict') else dict(result.params)
+        archive.torque_curve = [
+            {
+                "turn": p.turn,
+                "angle": p.angle,
+                "torque": p.torque,
+                "radius_outer": p.radius_outer,
+                "radius_inner": p.radius_inner,
+                "turns_remaining": p.turns_remaining
+            }
+            for p in result.torque_curve
+        ]
+        archive.analysis_summary = {
+            "max_torque": result.max_torque,
+            "min_torque": result.min_torque,
+            "avg_torque": result.avg_torque,
+            "total_turns": result.total_turns,
+            "total_energy": result.total_energy,
+            "decay_rate": (result.max_torque - result.min_torque) / result.max_torque * 100 if result.max_torque > 0 else 0,
+            "reserve_hours": 0
+        }
+
+        try:
+            from .mechanics import TorqueCalculator
+            reserve = TorqueCalculator.estimate_power_reserve(
+                result.torque_curve,
+                min_torque=result.max_torque * 0.35
+            )
+            archive.analysis_summary["reserve_hours"] = round(reserve, 2)
+        except Exception:
+            pass
+        archive.risk_warnings = list(result.risk_warnings)
+        archive.case_check = dict(result.case_check) if result.case_check else {}
+        archive.temp_effects = {}
+        for temp, eff in result.temp_effects.items():
+            archive.temp_effects[str(temp)] = dict(eff) if isinstance(eff, dict) else {"reserve_hours": eff}
+        archive.decay_segments = [list(s) for s in result.decay_segments]
+        return archive
+
+    def get_calc_deviation(self) -> dict:
+        """计算实测与理论的偏差"""
+        deviation = {}
+        summary = self.analysis_summary or {}
+
+        if summary.get("max_torque", 0) > 0 and self.measured_max_torque > 0:
+            deviation["max_torque_deviation_pct"] = round(
+                (self.measured_max_torque - summary["max_torque"]) / summary["max_torque"] * 100, 2
+            )
+
+        if summary.get("min_torque", 0) > 0 and self.measured_min_torque > 0:
+            deviation["min_torque_deviation_pct"] = round(
+                (self.measured_min_torque - summary["min_torque"]) / summary["min_torque"] * 100, 2
+            )
+
+        calc_reserve = summary.get("reserve_hours", 0)
+        if calc_reserve > 0 and self.measured_reserve_hours > 0:
+            deviation["reserve_deviation_pct"] = round(
+                (self.measured_reserve_hours - calc_reserve) / calc_reserve * 100, 2
+            )
+
+        return deviation
 
 
 @dataclass
@@ -65,6 +139,35 @@ class SpringSolution:
         for key, val in data.items():
             if hasattr(solution, key):
                 setattr(solution, key, val)
+        return solution
+
+    @classmethod
+    def from_archive(cls, archive: 'MovementArchive', name: str = "",
+                     category: str = "自定义", reserve_grade: str = "标准") -> 'SpringSolution':
+        """从机芯档案沉淀为方案"""
+        solution = cls()
+        solution.name = name or f"源自 {archive.name}"
+        solution.category = category
+        solution.reserve_grade = reserve_grade
+
+        summary = archive.analysis_summary or {}
+        solution.params = dict(archive.spring_params) if archive.spring_params else {}
+        solution.performance = {
+            "max_torque": round(summary.get("max_torque", 0), 1),
+            "min_torque": round(summary.get("min_torque", 0), 1),
+            "reserve_hours": round(summary.get("reserve_hours", 0), 1),
+            "total_turns": round(summary.get("total_turns", 0), 1),
+        }
+
+        if archive.notes:
+            solution.description = archive.notes
+
+        if archive.tags:
+            solution.application_scenarios = list(archive.tags)
+
+        if archive.model:
+            solution.reference_movements = [archive.model]
+
         return solution
 
 
@@ -445,3 +548,129 @@ class DataStorage:
             shutil.copy2(self.settings_file, os.path.join(backup_path, 'settings.json'))
 
         return backup_path
+
+
+class DesignReportGenerator:
+    """设计报告生成器"""
+
+    @staticmethod
+    def generate_text_report(result, compensation_result=None, filepath: str = None) -> str:
+        """生成文本格式的设计报告"""
+        from datetime import datetime
+
+        lines = []
+        lines.append("=" * 60)
+        lines.append("       发条动力储备设计报告")
+        lines.append("=" * 60)
+        lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append("")
+
+        lines.append("-" * 60)
+        lines.append("一、输入参数")
+        lines.append("-" * 60)
+        p = result.params
+        lines.append(f"  材料:       {p.material}")
+        lines.append(f"  料厚:       {p.thickness} mm")
+        lines.append(f"  料宽:       {p.width} mm")
+        lines.append(f"  长度:       {p.length} mm")
+        lines.append(f"  条盒内径:   {p.case_inner_dia} mm")
+        lines.append(f"  条轴直径:   {p.arbor_dia} mm")
+        lines.append(f"  弹性模量:   {p.E_ref} MPa (参考温度 {p.temp_ref}°C)")
+        lines.append(f"  温度系数:   {p.E_temp_coeff} /°C")
+        lines.append("")
+
+        lines.append("-" * 60)
+        lines.append("二、力矩特性")
+        lines.append("-" * 60)
+        lines.append(f"  满弦力矩:   {result.max_torque:.2f} g·cm")
+        lines.append(f"  末端力矩:   {result.min_torque:.2f} g·cm")
+        lines.append(f"  平均力矩:   {result.avg_torque:.2f} g·cm")
+        decay_rate = (result.max_torque - result.min_torque) / result.max_torque * 100 if result.max_torque > 0 else 0
+        lines.append(f"  力矩衰减率: {decay_rate:.1f}%")
+        lines.append(f"  总圈数:     {result.total_turns:.1f} 圈")
+        lines.append(f"  总能量:     {result.total_energy:.4f} J")
+        lines.append("")
+
+        lines.append("-" * 60)
+        lines.append("三、条盒容积校验")
+        lines.append("-" * 60)
+        cc = result.case_check or {}
+        lines.append(f"  条盒内径:       {cc.get('case_inner_dia', '-')} mm")
+        lines.append(f"  条轴直径:       {cc.get('arbor_dia', '-')} mm")
+        lines.append(f"  可用径向空间:   {cc.get('radial_space', '-')} mm")
+        lines.append(f"  理论圈数:       {cc.get('estimated_turns', '-')} 圈")
+        lines.append(f"  装填系数:       {cc.get('packing_factor', '-')}")
+        lines.append(f"  容积利用率:     {cc.get('volume_utilization', '-')}%")
+        lines.append(f"  状态:           {cc.get('status', '-')}")
+        if cc.get('note'):
+            lines.append(f"  说明:           {cc['note']}")
+        lines.append("")
+
+        lines.append("-" * 60)
+        lines.append("四、温度影响分析")
+        lines.append("-" * 60)
+        lines.append(f"{'温度(°C)':<12} {'弹性模量(MPa)':<16} {'动储时长(h)':<14} {'变化率(%)':<10}")
+        lines.append("-" * 56)
+        for temp, eff in sorted(result.temp_effects.items(), key=lambda x: float(x[0])):
+            if isinstance(eff, dict):
+                E = eff.get('E', '-')
+                reserve = eff.get('reserve_hours', '-')
+                change = eff.get('change_pct', '-')
+            else:
+                E = '-'
+                reserve = eff
+                change = '-'
+            lines.append(f"{temp:<12} {str(E):<16} {str(reserve):<14} {str(change):<10}")
+        lines.append("")
+
+        if compensation_result:
+            lines.append("-" * 60)
+            lines.append("五、均力补偿效果")
+            lines.append("-" * 60)
+            lines.append(f"  补偿方式:       {compensation_result.name}")
+            lines.append(f"  补偿前标准差:   {compensation_result.torque_std_before:.3f} g·cm")
+            lines.append(f"  补偿后标准差:   {compensation_result.torque_std_after:.3f} g·cm")
+            lines.append(f"  改善幅度:       {compensation_result.improvement_pct:.1f}%")
+            lines.append("")
+            if compensation_result.params:
+                lines.append(f"  补偿参数:")
+                for k, v in compensation_result.params.items():
+                    lines.append(f"    {k}: {v}")
+            lines.append("")
+
+        lines.append("-" * 60)
+        lines.append("六、风险预警")
+        lines.append("-" * 60)
+        if result.risk_warnings:
+            for i, warning in enumerate(result.risk_warnings, 1):
+                lines.append(f"  [{i}] {warning}")
+        else:
+            lines.append("  暂无风险预警，设计参数在合理范围内。")
+        lines.append("")
+
+        if result.decay_segments:
+            lines.append("-" * 60)
+            lines.append("七、力矩衰减过快区段")
+            lines.append("-" * 60)
+            for i, seg in enumerate(result.decay_segments, 1):
+                start_idx, end_idx = seg
+                if 0 <= start_idx < len(result.torque_curve) and 0 <= end_idx < len(result.torque_curve):
+                    start_turn = result.torque_curve[start_idx].turn
+                    end_turn = result.torque_curve[end_idx].turn
+                    start_torque = result.torque_curve[start_idx].torque
+                    end_torque = result.torque_curve[end_idx].torque
+                    lines.append(f"  区段 {i}: 第{start_turn:.1f}圈 ~ 第{end_turn:.1f}圈")
+                    lines.append(f"          力矩 {start_torque:.2f} → {end_torque:.2f} g·cm")
+            lines.append("")
+
+        lines.append("=" * 60)
+        lines.append("                    报告结束")
+        lines.append("=" * 60)
+
+        report_text = "\n".join(lines)
+
+        if filepath:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(report_text)
+
+        return report_text
